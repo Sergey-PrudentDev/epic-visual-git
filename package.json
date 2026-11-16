@@ -1,0 +1,54 @@
+{
+  "name": "epic-visual-git",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Epic Visual Git — an interactive Git control panel for OpenCode: branches, fetch, pull, stage, commit, merge, push, colored diffs, and commit-level undo/apply from the OpenCode Desktop panel or the TUI. Made with love by PrudentDev.",
+  "keywords": [
+    "epic-visual-git",
+    "opencode",
+    "opencode-plugin",
+    "git",
+    "gui",
+    "tui",
+    "diff"
+  ],
+  "author": "PrudentDev <https://PrudentDev.com>",
+  "homepage": "https://PrudentDev.com",
+  "funding": {
+    "type": "github",
+    "url": "https://PrudentDev.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sergey-PrudentDev/epic-visual-git.git"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./tui": "./src/tui.tsx",
+    "./rpc": "./src/rpc.ts",
+    "./gui-experimental": "./dist/gui-experimental.cjs"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@opencode/plugin": "^2.2.6"
+  },
+  "devDependencies": {
+    "solid-js": "^1.9.0",
+    "vite": "^7.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.6.6",
+    "@opentui/solid": ">=0.6.6",
+    "solid-js": ">=1.9.0"
+  }
+}
