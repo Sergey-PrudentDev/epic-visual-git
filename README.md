@@ -46,7 +46,7 @@ palette, or the side-panel **+** menu).
 The GUI part is the prebuilt bundle in `dist/`. Make sure the global `~/.config/opencode/opencode.json(c)` lists it:
 
 ```jsonc
-{ "plugins": ["./plugins/opencode-git-control"] } // or the published package name
+{ "plugins": ["./plugins/epic-visual-git"] } // or the published package name
 ```
 
 (Desktop loads GUI parts only from `opencode.json(c)`, not from `cli.json`.)
@@ -79,7 +79,7 @@ the GUI live).
 
 ```ts
 import { OpenCode } from "@opencode/client"
-import { GitControl } from "opencode-git-control/rpc"
+import { GitControl } from "epic-visual-git/rpc"
 
 const git = OpenCode.make({ baseUrl: "http://localhost:4096" }).rpc(GitControl)
 const status = await git.status()
