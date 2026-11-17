@@ -48,6 +48,11 @@ const CSS = `
 .ggc-act:active{transform:scale(.9)}
 .ggc-act--add:hover:not(:disabled){color:#3fb950;border-color:#3fb950;background:rgba(46,160,67,.18)}
 .ggc-act--rm:hover:not(:disabled){color:#f85149;border-color:#f85149;background:rgba(248,81,73,.15)}
+.ggc-refresh{width:20px;height:20px;flex:none;margin-left:2px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px;line-height:1;cursor:pointer;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:color-mix(in srgb,currentColor 6%,transparent);color:inherit;opacity:.7;transition:opacity .1s,color .1s,border-color .1s}
+.ggc-refresh:hover:not(:disabled){opacity:1;color:#58a6ff;border-color:color-mix(in srgb,#58a6ff 45%,transparent)}
+.ggc-refresh:disabled{opacity:.4;cursor:default}
+.ggc-refresh.ggc-spin{animation:ggc-rot .8s linear infinite}
+@keyframes ggc-rot{to{transform:rotate(360deg)}}
 .ggc-xy{flex:none;width:24px;text-align:center}
 .ggc-path{overflow:hidden;text-overflow:ellipsis}
 .ggc-input{background:color-mix(in srgb,currentColor 5%,transparent);border:1px solid color-mix(in srgb,currentColor 20%,transparent);color:inherit;border-radius:7px;padding:4px 8px;font:inherit;font-size:12.5px}
@@ -379,6 +384,15 @@ export default Plugin.define({
                   <Show when={conflictCount(s().files) > 0}>
                     <span class="ggc-pill ggc-bad" title="conflicted files that need resolution">⚠ {conflictCount(s().files)}</span>
                   </Show>
+                  <button
+                    class="ggc-refresh"
+                    classList={{ "ggc-spin": busy() }}
+                    disabled={busy()}
+                    title="Refresh — reload status, branches and history right now"
+                    onClick={() => void refresh()}
+                  >
+                    ⟳
+                  </button>
                 </div>
 
                 <Show when={s().merging}>
@@ -778,6 +792,15 @@ export default Plugin.define({
                       onClick={() => void act("Initialize repository", () => rpc().init({ directory: props.dir() }))}
                     >
                       Initialize repository
+                    </button>
+                    <button
+                      class="ggc-refresh"
+                      classList={{ "ggc-spin": busy() }}
+                      disabled={busy()}
+                      title="Refresh — check this folder again"
+                      onClick={() => void refresh()}
+                    >
+                      ⟳
                     </button>
                   </div>
                 </div>
