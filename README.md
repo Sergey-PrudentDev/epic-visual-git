@@ -3,7 +3,7 @@
 **Epic Visual Git** is an interactive Git control panel for [OpenCode](https://opencode.ai) — pick branches, fetch, pull, stage,
 commit, merge, and push from a dialog-driven GUI in the OpenCode TUI.
 
-> Made by [PrudentDev](https://PrudentDev.com) — software engineering, done prudently.
+> Made by [PrudentDev](https://PrudentDev.com) — expert software engineering.
 
 ## Features
 
