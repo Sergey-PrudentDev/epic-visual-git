@@ -79,6 +79,16 @@ const CSS = `
 .ggc-stat{flex:none;font-size:11px;margin-left:auto;padding-left:6px}
 .ggc-mini{padding:1px 8px;font-size:11px;border-radius:6px}
 .ggc-diffwrap{overflow:auto;max-height:320px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:8px;padding:6px 8px;background:color-mix(in srgb,currentColor 3%,transparent);font-family:ui-monospace,Consolas,monospace;font-size:11.5px;line-height:1.55}
+.ggc-filespane{display:flex;gap:9px;align-items:flex-start;margin:0 -4px;padding:0 4px}
+.ggc-split-left{flex:1 1 auto;min-width:0;margin:0}
+.ggc-filespane--split .ggc-split-left{flex:0 0 38%;max-width:38%}
+.ggc-split-right{flex:1 1 62%;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ggc-diffhead{display:flex;gap:6px;align-items:center}
+.ggc-diffpath{font-family:ui-monospace,Consolas,monospace;font-size:11px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.ggc-splitclose{flex:none;width:17px;height:17px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:10px;line-height:1;cursor:pointer;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:color-mix(in srgb,currentColor 6%,transparent);color:inherit;opacity:.65;transition:opacity .1s,color .1s,border-color .1s}
+.ggc-splitclose:hover{opacity:1;color:#f85149;border-color:#f85149}
+.ggc-file--sel{background:color-mix(in srgb,#58a6ff 13%,transparent)}
+.ggc-file--sel:hover{background:color-mix(in srgb,#58a6ff 17%,transparent)}
 .ggc-diffline{white-space:pre;display:block}
 .d-add{color:#3fb950;background:rgba(46,160,67,.15)}
 .d-del{color:#f85149;background:rgba(248,81,73,.12)}
@@ -471,22 +481,23 @@ export default Plugin.define({
                     </button>
                   </div>
                   <Show
-                    when={diffPath()}
+                    when={s().files.length > 0 || diffPath() !== null}
                     fallback={
-                      <Show
-                        when={s().files.length > 0}
-                        fallback={
-                          <div style={{ "text-align": "center", padding: "5px 0 3px" }}>
-                            <span class="ggc-pill ggc-ok">✓ working tree clean</span>
-                          </div>
-                        }
-                      >
-                        <div class="ggc-hint">Click a file to see its diff · hover a row to stage (+) or unstage (−) just that file</div>
-                        <div class="ggc-list" style={{ "max-height": "180px" }}>
+                      <div style={{ "text-align": "center", padding: "5px 0 3px" }}>
+                        <span class="ggc-pill ggc-ok">✓ working tree clean</span>
+                      </div>
+                    }
+                  >
+                    <Show when={diffPath() === null}>
+                      <div class="ggc-hint">Click a file to see its diff · hover a row to stage (+) or unstage (−) just that file</div>
+                    </Show>
+                    <div class="ggc-filespane" classList={{ "ggc-filespane--split": diffPath() !== null }}>
+                      <div class="ggc-list ggc-split-left" style={{ "max-height": diffPath() !== null ? "341px" : "180px" }}>
                           <For each={s().files}>
                             {(file) => (
                               <div
                                 class="ggc-file"
+                                classList={{ "ggc-file--sel": diffPath() === file.path }}
                                 title={isConflict(file) ? `Conflicted — click to see the diff: ${file.path}` : `View diff — ${file.path}`}
                                 onClick={() => void openDiff(file.path)}
                               >
@@ -529,34 +540,25 @@ export default Plugin.define({
                             )}
                           </For>
                         </div>
-                      </Show>
-                    }
-                  >
-                    {(path) => (
-                      <>
-                        <div class="ggc-row">
-                          <button class="ggc-btn" onClick={() => setDiffPath(null)}>
-                            ← Changes
-                          </button>
-                          <span
-                            style={{ opacity: 0.7, "font-size": "12px", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "min-width": "0", flex: "1" }}
-                            title={path() ?? ""}
-                          >
-                            {path()}
-                          </span>
-                        </div>
-                        <div class="ggc-diffwrap">
-                          <Show when={!diffBusy()} fallback={<span class="ggc-diffline d-meta">Loading diff…</span>}>
-                            <For each={diffLines()}>
-                              {(line) => <span class={lineClass(line)}>{line === "" ? " " : line}</span>}
-                            </For>
-                            <Show when={diffOut().split(/\r?\n/).length > DIFF_MAX_LINES}>
-                              <span class="ggc-diffline d-meta">… showing the first {DIFF_MAX_LINES} lines — open the file for the rest</span>
-                            </Show>
-                          </Show>
-                        </div>
-                      </>
-                    )}
+                        <Show when={diffPath() !== null}>
+                          <div class="ggc-split-right">
+                            <div class="ggc-diffhead">
+                              <span class="ggc-diffpath" title={diffPath() ?? ""}>{diffPath()}</span>
+                              <button class="ggc-splitclose" title="Close the diff view" onClick={() => setDiffPath(null)}>✕</button>
+                            </div>
+                            <div class="ggc-diffwrap">
+                              <Show when={!diffBusy()} fallback={<span class="ggc-diffline d-meta">Loading diff…</span>}>
+                                <For each={diffLines()}>
+                                  {(line) => <span class={lineClass(line)}>{line === "" ? " " : line}</span>}
+                                </For>
+                                <Show when={diffOut().split(/\r?\n/).length > DIFF_MAX_LINES}>
+                                  <span class="ggc-diffline d-meta">… showing the first {DIFF_MAX_LINES} lines — open the file for the rest</span>
+                                </Show>
+                              </Show>
+                            </div>
+                          </div>
+                        </Show>
+                    </div>
                   </Show>
                   <textarea
                     class="ggc-input ggc-textarea"
