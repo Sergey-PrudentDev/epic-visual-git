@@ -494,33 +494,27 @@ export default Plugin.define({
                   <Show
                     when={s().remotes.length > 0}
                     fallback={
-                      <>
-                        <div class="ggc-row">
-                          <input
-                            class="ggc-input"
-                            style={{ "min-width": "0", flex: "1" }}
-                            placeholder="Paste the clone URL from your git hosting page…"
-                            value={remoteUrl()}
-                            onInput={(e) => setRemoteUrl(e.currentTarget.value)}
-                          />
-                          <button
-                            class="ggc-btn"
-                            disabled={busy() || remoteUrl().trim() === ""}
-                            title="git remote add origin <url> (or set-url if origin exists), then fetch once"
-                            onClick={async () => {
-                              const url = remoteUrl().trim()
-                              await act("Set remote", () => rpc().setRemote({ directory: props.dir(), url }))
-                              if (note().startsWith("Set remote ✓")) setRemoteUrl("")
-                            }}
-                          >
-                            Set as origin
-                          </button>
-                        </div>
-                        <div class="ggc-hint">
-                          This repository has no remote yet. Paste its https or ssh clone URL to connect it — nothing is
-                          uploaded and nothing is fetched until your sign-in works; use Fetch afterwards.
-                        </div>
-                      </>
+                      <div class="ggc-row">
+                        <input
+                          class="ggc-input"
+                          style={{ "min-width": "0", flex: "1" }}
+                          placeholder="Paste the clone URL from your git hosting page…"
+                          value={remoteUrl()}
+                          onInput={(e) => setRemoteUrl(e.currentTarget.value)}
+                        />
+                        <button
+                          class="ggc-btn"
+                          disabled={busy() || remoteUrl().trim() === ""}
+                          title="git remote add origin <url> (or set-url if origin exists), then fetch once"
+                          onClick={async () => {
+                            const url = remoteUrl().trim()
+                            await act("Set remote", () => rpc().setRemote({ directory: props.dir(), url }))
+                            if (note().startsWith("Set remote ✓")) setRemoteUrl("")
+                          }}
+                        >
+                          Set as origin
+                        </button>
+                      </div>
                     }
                   >
                     <div class="ggc-row">
@@ -533,10 +527,6 @@ export default Plugin.define({
                       >
                         Pull Request ↗
                       </button>
-                    </div>
-                    <div class="ggc-hint">
-                      Opens the host's PR page for branch “{s().branch ?? "HEAD"}” — your last commit message becomes the
-                      title (pre-filled where the host supports it, always copied to the clipboard).
                     </div>
                   </Show>
                 </div>
