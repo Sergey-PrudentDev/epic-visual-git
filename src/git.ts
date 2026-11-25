@@ -204,6 +204,132 @@ export async function initRepo(cwd: string, signal?: AbortSignal): Promise<Opera
   }
 }
 
+/** Accepted origin URLs: scheme://…, scp-style ssh, or a local path (drive/UNC). */
+const REMOTE_URL = /^(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/|[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+:\S+|(?:[A-Za-z]:[\\/]|\\\\)\S+)/
+
+/** Point the repository at a remote (git remote add / set-url origin) and fetch it once, non-interactively. */
+export async function setRemote(cwd: string, url: string, signal?: AbortSignal): Promise<OperateOut> {
+  const u = url.trim()
+  if (!u || !REMOTE_URL.test(u)) return { ok: false, output: "that does not look like a repository URL — use the https or ssh clone URL from your git hosting page" }
+  const existed = await git(cwd, ["remote", "get-url", "origin"], signal)
+  const args = existed.code === 0 && existed.stdout.trim() ? ["remote", "set-url", "origin", u] : ["remote", "add", "origin", u]
+  const run = await git(cwd, args, signal)
+  if (run.code !== 0) return { ok: false, output: (run.stderr || run.stdout).trim() || "could not set the remote" }
+  const fetch = await git(cwd, ["-c", "credential.interactive=false", "fetch", "--prune", "--tags", "origin"], signal)
+  const fetched = fetch.code === 0
+  const verb = existed.code === 0 && existed.stdout.trim() ? "updated to" : "added"
+  return {
+    ok: true,
+    output: fetched
+      ? `origin ${verb} ${u} — its branches were fetched`
+      : `origin ${verb} ${u} — fetch did not complete (authentication?); press Fetch once you can sign in`,
+  }
+}
+
+export interface PrLinkOut {
+  ok: boolean
+  output: string
+  url: string | null
+  title: string | null
+}
+
+/** Map any common remote form (https, https with user@, .git suffix, scp-style ssh, Azure ssh v3) to a web URL. */
+function remoteWeb(remote: string): { host: string; path: string; web: string } | null {
+  let url = remote.trim().replace(/\/+$/, "")
+  if (url.endsWith(".git")) url = url.slice(0, -4)
+  if (!/^https?:\/\//i.test(url)) {
+    const scp = /^[A-Za-z0-9_.+-]+@([A-Za-z0-9.-]+):(\S+)$/.exec(url)
+    if (scp) {
+      const path = scp[2].replace(/^\/+/, "")
+      return { host: scp[1], path, web: `https://${scp[1]}/${path}` }
+    }
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null // plain local path or anything non-web
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null
+  const path = parsed.pathname.replace(/^\/+/, "").replace(/\/+$/, "")
+  return { host: parsed.hostname.replace(/^www\./, ""), path, web: `https://${parsed.hostname.replace(/^www\./, "")}/${path}` }
+}
+
+/** Build the hosting web UI's "create pull request" URL for the current branch, with the last commit subject as title. */
+export async function prInfo(cwd: string, signal?: AbortSignal): Promise<PrLinkOut> {
+  const remoteRun = await git(cwd, ["remote", "get-url", "origin"], signal)
+  const remote = remoteRun.stdout.trim()
+  if (remoteRun.code !== 0 || !remote)
+    return { ok: false, output: "no remote repository configured — paste a clone URL in the panel to add one", url: null, title: null }
+  const branch = (await git(cwd, ["branch", "--show-current"], signal)).stdout.trim()
+  if (!branch) return { ok: false, output: "you are on a detached HEAD — switch to a branch to open a pull request", url: null, title: null }
+
+  let base = ""
+  const headRef = await git(cwd, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], signal)
+  if (headRef.code === 0) base = headRef.stdout.trim().replace(/^origin\//, "")
+  if (!base) {
+    for (const cand of ["main", "master"]) {
+      const has = await git(cwd, ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${cand}`], signal)
+      if (has.code === 0) {
+        base = cand
+        break
+      }
+    }
+  }
+  if (!base) base = "main"
+
+  const title = (await git(cwd, ["log", "-1", "--format=%s"], signal)).stdout.trim() || `Update ${branch}`
+  const web = remoteWeb(remote)
+  if (!web) return { ok: false, output: "origin points to a local path — there is no web page to open", url: null, title }
+
+  const b = encodeURIComponent(branch)
+  const t = encodeURIComponent(title)
+  const clipboardHint = "the branch is preselected there, and your last commit message is on the clipboard — paste it as the title"
+
+  if (web.host === "github.com") {
+    return {
+      ok: true,
+      output: "opened the GitHub compare page — title pre-filled from your last commit",
+      url: `${web.web}/compare/${base}...${branch}?expand=1&title=${t}`,
+      title,
+    }
+  }
+  if (web.host === "dev.azure.com" || (web.host === "vs-ssh.visualstudio.com" && web.path.startsWith("v3/")) || web.host === "ssh.dev.azure.com") {
+    const p = web.path.startsWith("v3/") ? web.path.slice(3) : web.path
+    const m = /^(.+?)\/([^/]+)\/(?:_git\/)?(.+?)(?:\/)?$/.exec(p)
+    if (m) {
+      return {
+        ok: true,
+        output: `opened the Azure DevOps pull-request page — ${clipboardHint}`,
+        url: `https://dev.azure.com/${m[1]}/${m[2]}/_git/${m[3]}/pullRequestCreate?targetBranch=${encodeURIComponent(`refs/heads/${base}`)}&sourceBranch=${encodeURIComponent(`refs/heads/${branch}`)}`,
+        title,
+      }
+    }
+  }
+  if (web.host === "gitlab.com" || web.host.includes("gitlab")) {
+    return {
+      ok: true,
+      output: "opened the GitLab merge-request page — title pre-filled from your last commit",
+      url: `${web.web}/-/merge_requests/new?merge_request%5Bsource_branch%5D=${b}&merge_request%5Btarget_branch%5D=${encodeURIComponent(base)}&merge_request%5Btitle%5D=${t}`,
+      title,
+    }
+  }
+  if (web.host === "bitbucket.org") {
+    return {
+      ok: true,
+      output: `opened the Bitbucket pull-request page — ${clipboardHint}`,
+      url: `${web.web}/pull-request/new?source=${b}&dest=${encodeURIComponent(base)}`,
+      title,
+    }
+  }
+  return {
+    ok: true,
+    output: `opened the repository home for ${web.host} — start the pull request from its web UI; ${clipboardHint}`,
+    url: web.web,
+    title,
+  }
+}
+
 export async function stage(cwd: string, paths: string[], signal?: AbortSignal): Promise<OperateOut> {
 
   if (paths.length === 0) return operate(cwd, ["add", "-A"], signal)

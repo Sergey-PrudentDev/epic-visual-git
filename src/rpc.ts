@@ -101,6 +101,7 @@ const BRANCH = obj(
   ["name", "current", "ahead", "behind", "remote"],
 )
 const OPERATE = obj({ ok: bool, output: str }, ["ok", "output"])
+const PR_LINK = obj({ ok: bool, output: str, url: strOrNull, title: strOrNull }, ["ok", "output"])
 const COMMIT = obj({ ok: bool, output: str, hash: strOrNull }, ["ok", "output"])
 const LOG_ENTRY = obj({ hash: str, subject: str, author: str, when: str }, ["hash", "subject"])
 const COMMIT_FILE = obj({ path: str, status: str, additions: int, deletions: int }, ["path", "status", "additions", "deletions"])
@@ -153,6 +154,11 @@ export const GitControl = Rpc.define({
       output: OPERATE,
       errors: ERRORS,
     },
+    setRemote: {
+      input: input({ url: str }, ["url"]),
+      output: OPERATE,
+      errors: ERRORS,
+    },
     fetch: {
       input: input(),
       output: OPERATE,
@@ -166,6 +172,11 @@ export const GitControl = Rpc.define({
     push: {
       input: input({ setUpstream: bool }, ["setUpstream"]),
       output: OPERATE,
+      errors: ERRORS,
+    },
+    prLink: {
+      input: input(),
+      output: PR_LINK,
       errors: ERRORS,
     },
     stage: {

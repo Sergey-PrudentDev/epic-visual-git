@@ -194,6 +194,7 @@ export default Plugin.define({
       const [switchSel, setSwitchSel] = createSignal("")
       const [mergeSel, setMergeSel] = createSignal("")
       const [newBranch, setNewBranch] = createSignal("")
+      const [remoteUrl, setRemoteUrl] = createSignal("")
       const [diffPath, setDiffPath] = createSignal<string | null>(null)
       const [diffOut, setDiffOut] = createSignal("")
       const [diffBusy, setDiffBusy] = createSignal(false)
@@ -315,6 +316,33 @@ export default Plugin.define({
           rpc().commit({ directory: props.dir(), message: text, stageAll: stageAll() }),
         )
         if (!note().includes("✗")) setMessage("")
+      }
+
+      /** Read-only: ask the server for the host's PR URL, copy the title, open a browser tab. */
+      async function openPullRequest() {
+        if (busy()) return
+        setBusy(true)
+        setNote("")
+        try {
+          const r = await rpc().prLink({ directory: props.dir() })
+          if (r.ok && r.url) {
+            if (r.title) {
+              try {
+                await navigator.clipboard.writeText(r.title)
+              } catch {
+                // clipboard unavailable (insecure context?) — the note still tells the user what to do
+              }
+            }
+            window.open(r.url, "_blank", "noopener")
+            setNote(`Pull request ✓ ${firstLine(r.output)}`)
+          } else {
+            setNote(`Pull request ✗ ${firstLine(r.output)}`)
+          }
+        } catch (error) {
+          setNote(`Pull request ✗ ${String((error as Error)?.message ?? error)}`)
+        } finally {
+          setBusy(false)
+        }
       }
 
       createEffect(() => {
@@ -463,6 +491,54 @@ export default Plugin.define({
                           : "Merge: always joins the branches with a merge commit — easiest to undo, busier history."}
                     </div>
                   </div>
+                  <Show
+                    when={s().remotes.length > 0}
+                    fallback={
+                      <>
+                        <div class="ggc-row">
+                          <input
+                            class="ggc-input"
+                            style={{ "min-width": "0", flex: "1" }}
+                            placeholder="Paste the clone URL from your git hosting page…"
+                            value={remoteUrl()}
+                            onInput={(e) => setRemoteUrl(e.currentTarget.value)}
+                          />
+                          <button
+                            class="ggc-btn"
+                            disabled={busy() || remoteUrl().trim() === ""}
+                            title="git remote add origin <url> (or set-url if origin exists), then fetch once"
+                            onClick={async () => {
+                              const url = remoteUrl().trim()
+                              await act("Set remote", () => rpc().setRemote({ directory: props.dir(), url }))
+                              if (note().startsWith("Set remote ✓")) setRemoteUrl("")
+                            }}
+                          >
+                            Set as origin
+                          </button>
+                        </div>
+                        <div class="ggc-hint">
+                          This repository has no remote yet. Paste its https or ssh clone URL to connect it — nothing is
+                          uploaded and nothing is fetched until your sign-in works; use Fetch afterwards.
+                        </div>
+                      </>
+                    }
+                  >
+                    <div class="ggc-row">
+                      <span class="ggc-spacer" />
+                      <button
+                        class="ggc-btn"
+                        disabled={busy()}
+                        title="Open your git host's pull-request page in the browser with this branch selected"
+                        onClick={() => void openPullRequest()}
+                      >
+                        Pull Request ↗
+                      </button>
+                    </div>
+                    <div class="ggc-hint">
+                      Opens the host's PR page for branch “{s().branch ?? "HEAD"}” — your last commit message becomes the
+                      title (pre-filled where the host supports it, always copied to the clipboard).
+                    </div>
+                  </Show>
                 </div>
 
                 <div class="ggc-card">

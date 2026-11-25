@@ -82,6 +82,13 @@ export default Plugin.define({
         return result
       },
 
+      setRemote: async (input, context) => {
+        const c = context as HandlerContext
+        const url = ((input as { url?: string }).url ?? "").trim()
+        if (!url) return c.error("failed", "Paste the clone URL from your git hosting page first")
+        return mutate(input as AnyInput, c, () => g.setRemote(dir(input as AnyInput, c), url, c.signal))
+      },
+
       fetch: async (input, context) => {
         const c = context as HandlerContext
         return mutate(input as AnyInput, c, () => g.fetchAll(dir(input as AnyInput, c), c.signal))
@@ -97,6 +104,11 @@ export default Plugin.define({
         const c = context as HandlerContext
         const setUpstream = (input as { setUpstream?: boolean }).setUpstream === true
         return mutate(input as AnyInput, c, () => g.push(dir(input as AnyInput, c), setUpstream, c.signal))
+      },
+
+      prLink: async (input, context) => {
+        const c = context as HandlerContext
+        return guard(input as AnyInput, c, () => g.prInfo(dir(input as AnyInput, c), c.signal))
       },
 
       stage: async (input, context) => {

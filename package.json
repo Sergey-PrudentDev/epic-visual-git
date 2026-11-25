@@ -1,8 +1,8 @@
 {
   "name": "epic-visual-git",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Epic Visual Git — an interactive Git control panel for OpenCode: branches, fetch, pull, stage, commit, merge, push, colored diffs, and commit-level undo/apply from the OpenCode Desktop panel or the TUI. Made with love by PrudentDev.",
+  "description": "Epic Visual Git — an interactive Git control panel for OpenCode: branches, fetch, pull, stage, commit, merge, push, one-tap pull requests in your browser, colored diffs, and commit-level undo/apply from the OpenCode Desktop panel or the TUI. Made with love by PrudentDev.",
   "keywords": [
     "epic-visual-git",
     "opencode",
